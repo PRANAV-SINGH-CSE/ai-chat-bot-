@@ -1,27 +1,17 @@
-// -------- SESSION PERSISTENCE --------
 let sessionId = localStorage.getItem("session_id");
 if (!sessionId) {
     sessionId = crypto.randomUUID();
     localStorage.setItem("session_id", sessionId);
 }
 
-// -------- CONFIG (IMPORTANT) --------
-// 🔴 REPLACE THIS WITH YOUR CLOUDFLARE / NGROK URL
-const API_BASE = "https://YOUR-TUNNEL-URL.trycloudflare.com";
-
-// 🔐 SIMPLE AUTH (MUST MATCH BACKEND)
-const AUTH_TOKEN = "my-secret-key";
-
 let currentImageBase64 = null;
 
-// -------- DOM --------
 const chatBox = document.getElementById('chat-box');
 const msgInput = document.getElementById('msg-input');
 const imgInput = document.getElementById('img-input');
 const sendBtn = document.getElementById('send-btn');
 const preview = document.getElementById('preview');
 
-// -------- IMAGE UPLOAD --------
 imgInput.addEventListener('change', function () {
     const file = this.files[0];
     if (!file) return;
@@ -35,7 +25,6 @@ imgInput.addEventListener('change', function () {
     reader.readAsDataURL(file);
 });
 
-// -------- UI HELPERS --------
 function appendMessage(text, sender) {
     const div = document.createElement('div');
     div.className = `message ${sender}`;
@@ -44,56 +33,46 @@ function appendMessage(text, sender) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function showLoading() {
-    const loader = document.getElementById('loading-bubble');
-    loader.style.display = 'block';
-    chatBox.appendChild(loader);
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-function hideLoading() {
-    const loader = document.getElementById('loading-bubble');
-    loader.style.display = 'none';
-}
-
-// -------- LOAD HISTORY --------
 async function loadHistory() {
-    chatBox.innerHTML = ""; // 🔥 PREVENT DUPLICATES
-
     try {
-        const res = await fetch(`${API_BASE}/history/${sessionId}`, {
-            headers: {
-                "X-Auth": AUTH_TOKEN
-            }
-        });
-
-        if (!res.ok) return;
-
+        const res = await fetch(`/history/${sessionId}`);
         const data = await res.json();
 
         data.history.forEach(msg => {
-            appendMessage(
-                msg.content,
-                msg.role === "assistant" ? "model" : "user"
-            );
+            appendMessage(msg.content, msg.role === "assistant" ? "model" : "user");
         });
-    } catch (err) {
-        console.warn("No history loaded");
+    } catch {
+        console.warn("No history found");
     }
 }
 
 window.onload = loadHistory;
 
-// -------- ENTER KEY --------
+function showLoading() {
+    const loader = document.getElementById('loading-bubble');
+    const chatBox = document.getElementById('chat-box');
+    
+    chatBox.appendChild(loader);
+    loader.style.display = 'block';
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function hideLoading() {
+    const loader = document.getElementById('loading-bubble');
+    if (loader) {
+        loader.style.display = 'none';
+    }
+}
+
 function handleEnter(event) {
     if (event.key === 'Enter') {
         sendMessage();
     }
 }
 
-// -------- SEND MESSAGE --------
 async function sendMessage() {
     const text = msgInput.value.trim();
+    
     if (!text && !currentImageBase64) return;
 
     appendMessage(text + (currentImageBase64 ? " [Image]" : ""), "user");
@@ -101,6 +80,7 @@ async function sendMessage() {
     msgInput.value = "";
     preview.style.display = "none";
     sendBtn.disabled = true;
+
     showLoading();
 
     const payload = {
@@ -110,17 +90,16 @@ async function sendMessage() {
     };
 
     try {
-        const res = await fetch(`${API_BASE}/chat`, {
+        const res = await fetch("/chat", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Auth": AUTH_TOKEN
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         });
 
         const data = await res.json();
+
         hideLoading();
+
         appendMessage(data.response, "model");
 
     } catch (error) {
