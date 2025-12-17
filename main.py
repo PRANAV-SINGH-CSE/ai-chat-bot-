@@ -62,12 +62,8 @@ def decode_image(image_base64: str) -> bytes:
 
 # ---------------- ENDPOINTS ----------------
 @app.post("/chat")
-async def chat_endpoint(
-    req: ChatRequest,
-    x_auth: str = Header(None)
-):
-    check_auth(x_auth)
-
+@app.post("/chat")
+async def chat_endpoint(req: ChatRequest):
     history = get_session(req.session_id)
 
     user_msg = {
@@ -75,16 +71,23 @@ async def chat_endpoint(
         "content": req.message or "Analyze the image."
     }
 
+    has_image = False
+
     if req.image_base64:
         user_msg["images"] = [decode_image(req.image_base64)]
+        has_image = True
 
     history.append(user_msg)
     history[:] = history[-MAX_HISTORY:]
 
     try:
-        response = ollama.chat(model="llava", messages=history)
+        response = ollama.chat(
+            model="llava" if has_image else "llama3",
+            messages=history
+        )
         reply = response["message"]["content"]
-    except Exception:
+    except Exception as e:
+        print("Ollama error:", e)
         raise HTTPException(500, "Model failed")
 
     history.append({"role": "assistant", "content": reply})
@@ -95,6 +98,7 @@ async def chat_endpoint(
         user_msg["content"] += " [Image]"
 
     return {"response": reply}
+
 
 @app.get("/history/{session_id}")
 async def get_history(
