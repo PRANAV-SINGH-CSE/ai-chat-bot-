@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Multimodal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="brand-header">
+        Shadow.ai
+    </div>
+    <div id="chat-box">
+        <div id="loading-bubble" class="message model" style="display: none;">
+            <div class="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </div>
+    <div class="controls">
+        <img id="preview" alt="preview">
+        <input type="file" id="img-input" accept="image/*" style="display:none">
+        <button onclick="document.getElementById('img-input').click()">📷</button>
+        <input type="text" id="msg-input" placeholder="Type a message..." onkeypress="handleEnter(event)">
+        <button id="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
